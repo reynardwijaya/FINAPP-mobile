@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
+import { API_BASE_URL } from '../../constants/Api';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -34,7 +35,7 @@ export default function Income() {
   // Fetch data dari backend
   useEffect(() => {
     setLoading(true);
-    fetch('https://backendreact-production-e680.up.railway.app/income') // Endpoint untuk income
+    fetch(`${API_BASE_URL}/income`) // Endpoint untuk income
       .then(res => res.json())
       .then(data => {
         console.log('RAW INCOME DATA FROM BACKEND:', data);
@@ -70,7 +71,7 @@ export default function Income() {
     if (!deleteId) return;
     setShowDeleteModal(false);
     try {
-      const res = await fetch(`https://backendreact-production-e680.up.railway.app/transactions/${deleteId}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE_URL}/transactions/${deleteId}`, { method: 'DELETE' });
       if (res.ok) {
         setIncomes(prev => prev.filter(tx => tx.id !== deleteId));
       } else {
