@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Modal
 import { router } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { API_BASE_URL } from '../../constants/Api';
@@ -41,28 +41,17 @@ interface Transaction {
   category: string;
 }
 
-// Tipe untuk userRole dan userName
-let userRole: 'admin' | 'staff' | null = null;
-let userName: string | null = null;
-if (typeof window !== 'undefined') {
-  const params = new URLSearchParams(window.location.search);
-  userRole = params.get('userRole') as 'admin' | 'staff' | null;
-  userName = params.get('userName');
-} else {
-  // @ts-ignore
-  const { useLocalSearchParams } = require('expo-router');
-  const params = useLocalSearchParams();
-  userRole = params.userRole as 'admin' | 'staff' | null;
-  userName = params.userName as string | null;
-}
-
-useEffect(() => {
-  if (!userRole || !userName) {
-    router.replace('/');
-  }
-}, []);
-
 export default function Home() {
+  const params = useLocalSearchParams();
+  const userRole = params.userRole as 'admin' | 'staff' | null;
+  const userName = params.userName as string | null;
+
+  useEffect(() => {
+    if (!userRole || !userName) {
+      router.replace('/');
+    }
+  }, [userRole, userName]);
+
   const [balance, setBalance] = useState('Rp 5.000.000');
   const [expenses, setExpenses] = useState('Rp 2.500.000');
   const [income, setIncome] = useState('Rp 7.500.000');
