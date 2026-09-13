@@ -1,8 +1,21 @@
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ScrollView, Modal } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import { API_BASE_URL } from '../../constants/Api';
+
+const palette = {
+  bg: '#F2F4F8',
+  card: '#FFFFFF',
+  ink: '#1C1C1E',
+  inkSoft: '#6E6E73',
+  inkFaint: '#AEAEB2',
+  divider: '#EDEDF2',
+  blue: '#0A84FF',
+  red: '#FF453A',
+};
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -34,7 +47,7 @@ export default function Expenses() {
   // Fetch data dari backend
   useEffect(() => {
     setLoading(true);
-    fetch('https://backendreact-production-e680.up.railway.app/expenses')
+    fetch(`${API_BASE_URL}/expenses`)
       .then(res => res.json())
       .then(data => {
         console.log('RAW DATA FROM BACKEND:', data);
@@ -90,7 +103,7 @@ export default function Expenses() {
     if (!deleteId) return;
     setShowDeleteModal(false);
     try {
-      const res = await fetch(`https://backendreact-production-e680.up.railway.app/transactions/${deleteId}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE_URL}/transactions/${deleteId}`, { method: 'DELETE' });
       if (res.ok) {
         setExpenses(prev => prev.filter(tx => tx.id !== deleteId));
       } else {
@@ -107,15 +120,15 @@ export default function Expenses() {
     setDeleteId(null);
   };
 
-  const renderItem = ({ item }: { item: Expense }) => (
-    <View style={styles.expenseItem}>
+  const renderItem = ({ item, index }: { item: Expense; index: number }) => (
+    <View style={[styles.expenseItem, index === filteredExpenses.length - 1 && styles.expenseItemLast]}>
       <View style={styles.expenseLeft}>
         <View style={styles.expenseIcon}>
-          <Ionicons 
-            name={item.category === 'cart' ? 'restaurant' : 
-                  item.category === 'transport' ? 'bus' : 'flash'} 
-            size={20} 
-            color="#007AFF" 
+          <Ionicons
+            name={item.category === 'cart' ? 'restaurant' :
+                  item.category === 'transport' ? 'bus' : 'flash'}
+            size={18}
+            color={palette.blue}
           />
         </View>
         <View style={{ flex: 1, marginRight: 8 }}>
@@ -124,228 +137,261 @@ export default function Expenses() {
         </View>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Text 
+        <Text
           style={styles.expenseAmount}
           adjustsFontSizeToFit={true}
           minimumFontScale={0.7}
-        >Rp {item.amount.toLocaleString('id-ID')}</Text>
-        <TouchableOpacity 
-          onPress={() => handleDeleteExpense(item.id)} 
-          style={{ marginLeft: 12, padding: 8, flexShrink: 0 }}
+        >-Rp {item.amount.toLocaleString('id-ID')}</Text>
+        <TouchableOpacity
+          onPress={() => handleDeleteExpense(item.id)}
+          style={styles.deleteIconButton}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="trash" size={20} color="#FF3B30" />
+          <Ionicons name="trash-outline" size={16} color={palette.inkFaint} />
         </TouchableOpacity>
       </View>
     </View>
   );
 
   return (
-    <LinearGradient
-      colors={['#ADD8E6', '#87CEEB', '#6495ED']}
-      style={styles.gradientBackground}
-    >
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.replace('/home')}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Expenses</Text>
-          <TouchableOpacity onPress={() => router.push({ pathname: '/add-expense', params: { month: selectedMonth, year: selectedYear } })}>
-            <Ionicons name="add" size={24} color="#007AFF" />
-          </TouchableOpacity>
-        </View>
+    <View style={styles.screen}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.replace('/home')} style={styles.iconButton} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={20} color={palette.ink} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Expenses</Text>
+        <TouchableOpacity
+          onPress={() => router.push({ pathname: '/add-expense', params: { month: selectedMonth, year: selectedYear } })}
+          style={styles.iconButton}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="add" size={22} color={palette.blue} />
+        </TouchableOpacity>
+      </View>
 
-        <View style={styles.dateSelector}>
-          <ScrollView horizontal style={styles.monthSelector} showsHorizontalScrollIndicator={false}>
-            {MONTHS.map((month, index) => (
-              <TouchableOpacity
-                key={month}
-                style={[
-                  styles.monthItem,
-                  selectedMonth === index && styles.monthItemSelected
-                ]}
-                onPress={() => setSelectedMonth(index)}
-              >
-                <Text style={[
-                  styles.monthText,
-                  selectedMonth === index && styles.monthTextSelected
-                ]}>
-                  {month}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          <ScrollView horizontal style={styles.yearSelector} showsHorizontalScrollIndicator={false}>
-            {YEARS.map((year) => (
-              <TouchableOpacity
-                key={year}
-                style={[
-                  styles.yearItem,
-                  selectedYear === year && styles.yearItemSelected
-                ]}
-                onPress={() => setSelectedYear(year)}
-              >
-                <Text style={[
-                  styles.yearText,
-                  selectedYear === year && styles.yearTextSelected
-                ]}>
-                  {year}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        <View style={styles.summary}>
-          <Text style={styles.summaryTitle}>Total Expenses</Text>
-          <Text style={styles.summaryAmount}>Rp {totalExpenses.toLocaleString()}</Text>
-          <Text style={styles.summaryPeriod}>{MONTHS[selectedMonth]} {selectedYear}</Text>
-        </View>
-
-        <FlatList
-          data={filteredExpenses}
-          renderItem={renderItem}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.list}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>
-                {loading ? 'Loading...' : `No expenses for ${MONTHS[selectedMonth]} ${selectedYear}`}
+      <View style={styles.dateSelector}>
+        <ScrollView horizontal style={styles.monthSelector} showsHorizontalScrollIndicator={false}>
+          {MONTHS.map((month, index) => (
+            <TouchableOpacity
+              key={month}
+              style={[styles.monthItem, selectedMonth === index && styles.monthItemSelected]}
+              onPress={() => setSelectedMonth(index)}
+              activeOpacity={0.75}
+            >
+              <Text style={[styles.monthText, selectedMonth === index && styles.monthTextSelected]}>
+                {month}
               </Text>
-            </View>
-          }
-        />
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
-        {/* Modal Konfirmasi Hapus */}
-        {showDeleteModal && (
-          <View style={{
-            position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center', zIndex: 1000
-          }}>
-            <View style={{ backgroundColor: '#fff', padding: 24, borderRadius: 12, alignItems: 'center', width: 300 }}>
-              <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>Delete Expense</Text>
-              <Text style={{ fontSize: 16, marginBottom: 24 }}>Are you sure you want to delete this expense?</Text>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
-                <TouchableOpacity onPress={cancelDeleteExpense} style={{ flex: 1, marginRight: 8, padding: 12, backgroundColor: '#eee', borderRadius: 8, alignItems: 'center' }}>
-                  <Text style={{ color: '#333', fontWeight: 'bold' }}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={confirmDeleteExpense} style={{ flex: 1, marginLeft: 8, padding: 12, backgroundColor: '#FF3B30', borderRadius: 8, alignItems: 'center' }}>
-                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Delete</Text>
-                </TouchableOpacity>
-              </View>
+        <ScrollView horizontal style={styles.yearSelector} showsHorizontalScrollIndicator={false}>
+          {YEARS.map((year) => (
+            <TouchableOpacity
+              key={year}
+              style={[styles.yearItem, selectedYear === year && styles.yearItemSelected]}
+              onPress={() => setSelectedYear(year)}
+              activeOpacity={0.75}
+            >
+              <Text style={[styles.yearText, selectedYear === year && styles.yearTextSelected]}>
+                {year}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      <FlatList
+        data={filteredExpenses}
+        renderItem={renderItem}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <View style={styles.summary}>
+            <LinearGradient
+              colors={['#1D4ED8', '#0A84FF', '#38C6F4']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={styles.summaryGlow} pointerEvents="none" />
+            <Text style={styles.summaryTitle}>Total Expenses</Text>
+            <Text style={styles.summaryAmount}>Rp {totalExpenses.toLocaleString('id-ID')}</Text>
+            <Text style={styles.summaryPeriod}>{MONTHS[selectedMonth]} {selectedYear}</Text>
+          </View>
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="receipt-outline" size={28} color={palette.inkFaint} />
+            <Text style={styles.emptyStateText}>
+              {loading ? 'Loading...' : `No expenses for ${MONTHS[selectedMonth]} ${selectedYear}`}
+            </Text>
+          </View>
+        }
+      />
+
+      {/* Modal Konfirmasi Hapus */}
+      <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={cancelDeleteExpense}>
+        <BlurView intensity={40} tint="dark" style={styles.modalOverlay}>
+          <View style={styles.confirmCard}>
+            <View style={styles.confirmIconWrap}>
+              <Ionicons name="trash" size={22} color={palette.red} />
+            </View>
+            <Text style={styles.confirmCardTitle}>Delete Expense</Text>
+            <Text style={styles.confirmCardBody}>This action can't be undone. Are you sure you want to delete this expense?</Text>
+            <View style={styles.confirmCardActions}>
+              <TouchableOpacity onPress={cancelDeleteExpense} style={styles.ghostActionButton} activeOpacity={0.75}>
+                <Text style={styles.ghostActionText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={confirmDeleteExpense} style={styles.dangerActionButton} activeOpacity={0.85}>
+                <Text style={styles.dangerActionText}>Delete</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        )}
-      </View>
-    </LinearGradient>
+        </BlurView>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: palette.bg,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
+    paddingHorizontal: 20,
     paddingTop: 60,
+    paddingBottom: 16,
+  },
+  iconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0A2540',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '700',
+    color: palette.ink,
   },
   dateSelector: {
-    backgroundColor: '#fff',
-    paddingBottom: 10,
+    paddingBottom: 6,
   },
   monthSelector: {
-    paddingHorizontal: 10,
-    paddingVertical: 15,
+    paddingHorizontal: 20,
+    marginBottom: 8,
   },
   monthItem: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 20,
-    marginHorizontal: 4,
-    backgroundColor: '#f0f0f0',
+    borderRadius: 16,
+    marginRight: 8,
+    backgroundColor: palette.card,
   },
   monthItemSelected: {
-    backgroundColor: '#007AFF',
+    backgroundColor: palette.blue,
   },
   monthText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13.5,
+    color: palette.inkSoft,
+    fontWeight: '500',
   },
   monthTextSelected: {
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   yearSelector: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 20,
   },
   yearItem: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 16,
-    marginHorizontal: 4,
-    backgroundColor: '#f0f0f0',
+    borderRadius: 14,
+    marginRight: 8,
+    backgroundColor: palette.card,
   },
   yearItemSelected: {
-    backgroundColor: '#007AFF',
+    backgroundColor: palette.blue,
   },
   yearText: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: 12.5,
+    color: palette.inkSoft,
+    fontWeight: '500',
   },
   yearTextSelected: {
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   summary: {
-    margin: 20,
-    padding: 20,
-    backgroundColor: '#007AFF',
-    borderRadius: 16,
+    padding: 22,
+    borderRadius: 26,
     alignItems: 'center',
+    overflow: 'hidden',
+    marginBottom: 20,
+    marginTop: 6,
+    shadowColor: '#0A2540',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 22,
+    elevation: 8,
+  },
+  summaryGlow: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    top: -80,
+    right: -50,
   },
   summaryTitle: {
-    fontSize: 14,
-    color: '#fff',
-    opacity: 0.8,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.75)',
+    fontWeight: '500',
+    letterSpacing: 0.2,
   },
   summaryAmount: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 34,
+    fontWeight: '800',
     color: '#fff',
     marginVertical: 8,
+    fontVariant: ['tabular-nums'],
   },
   summaryPeriod: {
-    fontSize: 14,
-    color: '#fff',
-    opacity: 0.8,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500',
   },
   list: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 32,
   },
   expenseItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 15,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    backgroundColor: palette.card,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.divider,
+  },
+  expenseItemLast: {
+    borderBottomWidth: 0,
+    borderBottomLeftRadius: 22,
+    borderBottomRightRadius: 22,
   },
   expenseLeft: {
     flexDirection: 'row',
@@ -355,36 +401,107 @@ const styles = StyleSheet.create({
   expenseIcon: {
     width: 40,
     height: 40,
-    backgroundColor: '#f0f8ff',
-    borderRadius: 12,
+    backgroundColor: 'rgba(10,132,255,0.1)',
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
   expenseTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
+    fontSize: 14.5,
+    fontWeight: '600',
+    color: palette.ink,
   },
   expenseDate: {
     fontSize: 12,
-    color: '#666',
+    color: palette.inkFaint,
     marginTop: 2,
   },
   expenseAmount: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FF3B30',
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: palette.red,
+    fontVariant: ['tabular-nums'],
+  },
+  deleteIconButton: {
+    marginLeft: 10,
+    padding: 4,
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 30,
+    paddingVertical: 36,
+    gap: 8,
+    backgroundColor: palette.card,
+    borderRadius: 22,
   },
   emptyStateText: {
-    fontSize: 16,
-    color: '#666',
+    color: palette.inkFaint,
+    fontSize: 13.5,
+    fontWeight: '500',
   },
-  gradientBackground: {
+
+  // Delete confirmation modal
+  modalOverlay: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-}); 
+  confirmCard: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    width: 300,
+  },
+  confirmIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255,69,58,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  confirmCardTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: palette.ink,
+    marginBottom: 8,
+  },
+  confirmCardBody: {
+    fontSize: 13.5,
+    color: palette.inkSoft,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 22,
+  },
+  confirmCardActions: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 10,
+  },
+  ghostActionButton: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 14,
+    backgroundColor: palette.bg,
+    alignItems: 'center',
+  },
+  ghostActionText: {
+    color: palette.ink,
+    fontWeight: '700',
+    fontSize: 14.5,
+  },
+  dangerActionButton: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 14,
+    backgroundColor: palette.red,
+    alignItems: 'center',
+  },
+  dangerActionText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14.5,
+  },
+});

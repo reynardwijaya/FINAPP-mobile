@@ -4,7 +4,18 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { LinearGradient } from 'expo-linear-gradient';
+import { API_BASE_URL } from '../../constants/Api';
+
+const palette = {
+  bg: '#F2F4F8',
+  card: '#FFFFFF',
+  ink: '#1C1C1E',
+  inkSoft: '#6E6E73',
+  inkFaint: '#AEAEB2',
+  divider: '#EDEDF2',
+  blue: '#0A84FF',
+  green: '#30D158',
+};
 
 const INCOME_TYPES = [
   { id: 'salary', icon: 'cash', label: 'Penjualan' },
@@ -19,10 +30,12 @@ export default function AddBalance() {
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
 
+  const canSave = !!(amount && description && selectedType);
+
   const handleSave = async () => {
     if (!amount || !description || !selectedType) return;
     try {
-      const res = await fetch('https://backendreact-production-e680.up.railway.app/transactions', {
+      const res = await fetch(`${API_BASE_URL}/transactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -45,236 +58,269 @@ export default function AddBalance() {
   };
 
   return (
-    <LinearGradient
-      colors={['#ADD8E6', '#87CEEB', '#6495ED']}
-      style={styles.gradientBackground}
-    >
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="close" size={24} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Add Income</Text>
-          <TouchableOpacity 
-            onPress={handleSave}
-            disabled={!amount || !description || !selectedType}
-            style={[
-              styles.saveButton,
-              (!amount || !description || !selectedType) && styles.saveButtonDisabled
-            ]}
-          >
-            <Text style={[
-              styles.saveButtonText,
-              (!amount || !description || !selectedType) && styles.saveButtonTextDisabled
-            ]}>Save</Text>
-          </TouchableOpacity>
-        </View>
+    <View style={styles.screen}>
+      {/* Sheet header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
+          <Text style={styles.headerAction}>Cancel</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Add Income</Text>
+        <TouchableOpacity onPress={handleSave} disabled={!canSave} hitSlop={10}>
+          <Text style={[styles.headerAction, styles.headerSave, !canSave && styles.headerSaveDisabled]}>
+            Save
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-        <ScrollView style={styles.content}>
-          {/* Amount Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Amount</Text>
-            <View style={styles.amountInput}>
-              <Text style={styles.currency}>Rp</Text>
-              <TextInput
-                style={styles.amountTextInput}
-                value={amount}
-                onChangeText={setAmount}
-                keyboardType="numeric"
-                placeholder="0"
-                placeholderTextColor="#999"
-              />
-            </View>
-          </View>
-
-          {/* Title Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Title</Text>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Amount — gaya "how much" ala Apple Cash */}
+        <View style={styles.amountBlock}>
+          <Text style={styles.amountLabel}>Amount</Text>
+          <View style={styles.amountRow}>
+            <Text style={styles.currency}>Rp</Text>
             <TextInput
-              style={styles.textInput}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Title of income"
-              placeholderTextColor="#999"
+              style={styles.amountTextInput}
+              value={amount}
+              onChangeText={setAmount}
+              keyboardType="numeric"
+              placeholder="0"
+              placeholderTextColor={palette.inkFaint}
             />
           </View>
+        </View>
 
-          {/* Date Picker */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Date</Text>
-            {Platform.OS === 'web' ? (
-              <input
-                type="date"
-                value={date.toISOString().slice(0, 10)}
-                onChange={e => setDate(new Date(e.target.value))}
-                style={{
-                  width: '100%',
-                  height: 56,
-                  borderRadius: 12,
-                  border: '1px solid #ccc',
-                  padding: 16,
-                  fontSize: 16,
-                  color: '#333',
-                }}
-              />
-            ) : (
-              <>
-                <TouchableOpacity onPress={() => setShowDatePicker(true)} style={[styles.textInput, { justifyContent: 'center' }]}> 
-                  <Text style={{ color: '#333' }}>{date.toLocaleDateString('id-ID')}</Text>
-                </TouchableOpacity>
-                {showDatePicker && (
-                  <DateTimePicker
-                    value={date}
-                    mode="date"
-                    display="default"
-                    onChange={(event, selectedDate) => {
-                      setShowDatePicker(false);
-                      if (selectedDate) setDate(selectedDate);
-                    }}
-                  />
-                )}
-              </>
-            )}
-          </View>
+        {/* Title */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Title</Text>
+          <TextInput
+            style={styles.textInput}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Title of income"
+            placeholderTextColor={palette.inkFaint}
+          />
+        </View>
 
-          {/* Income Type Selection */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Income Type</Text>
-            <View style={styles.typeGrid}>
-              {INCOME_TYPES.map((type) => (
+        {/* Date */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Date</Text>
+          {Platform.OS === 'web' ? (
+            <input
+              type="date"
+              value={date.toISOString().slice(0, 10)}
+              onChange={e => setDate(new Date(e.target.value))}
+              style={{
+                width: '100%',
+                height: 54,
+                borderRadius: 14,
+                border: 'none',
+                background: palette.bg,
+                padding: '0 16px',
+                fontSize: 15,
+                color: palette.ink,
+                boxSizing: 'border-box',
+              }}
+            />
+          ) : (
+            <>
+              <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateRow} activeOpacity={0.7}>
+                <View style={styles.dateRowLeft}>
+                  <Ionicons name="calendar-outline" size={18} color={palette.inkFaint} />
+                  <Text style={styles.dateRowText}>{date.toLocaleDateString('id-ID')}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={palette.inkFaint} />
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={date}
+                  mode="date"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(false);
+                    if (selectedDate) setDate(selectedDate);
+                  }}
+                />
+              )}
+            </>
+          )}
+        </View>
+
+        {/* Income Type */}
+        <View style={[styles.inputContainer, { marginBottom: 32 }]}>
+          <Text style={styles.label}>Income Type</Text>
+          <View style={styles.typeGrid}>
+            {INCOME_TYPES.map((type) => {
+              const selected = selectedType === type.id;
+              return (
                 <TouchableOpacity
                   key={type.id}
-                  style={[
-                    styles.typeItem,
-                    selectedType === type.id && styles.typeItemSelected
-                  ]}
+                  style={[styles.typeItem, selected && styles.typeItemSelected]}
                   onPress={() => setSelectedType(type.id)}
+                  activeOpacity={0.8}
                 >
-                  <Ionicons
-                    name={type.icon as keyof typeof Ionicons.glyphMap}
-                    size={24}
-                    color={selectedType === type.id ? '#fff' : '#34C759'}
-                  />
-                  <Text
-                    style={[
-                      styles.typeLabel,
-                      selectedType === type.id && styles.typeLabelSelected
-                    ]}
-                  >
+                  <View style={[styles.typeIconWrap, selected && styles.typeIconWrapSelected]}>
+                    <Ionicons
+                      name={type.icon as keyof typeof Ionicons.glyphMap}
+                      size={20}
+                      color={selected ? '#fff' : palette.green}
+                    />
+                  </View>
+                  <Text style={[styles.typeLabel, selected && styles.typeLabelSelected]}>
                     {type.label}
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </View>
+              );
+            })}
           </View>
-        </ScrollView>
-      </View>
-    </LinearGradient>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: palette.bg,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
+    paddingHorizontal: 20,
     paddingTop: 60,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingBottom: 16,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16.5,
+    fontWeight: '700',
+    color: palette.ink,
   },
-  saveButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#34C759',
-    borderRadius: 8,
+  headerAction: {
+    fontSize: 15.5,
+    color: palette.inkSoft,
+    fontWeight: '500',
   },
-  saveButtonDisabled: {
-    backgroundColor: '#E5E5EA',
+  headerSave: {
+    color: palette.blue,
+    fontWeight: '700',
   },
-  saveButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  saveButtonTextDisabled: {
-    color: '#999',
+  headerSaveDisabled: {
+    color: palette.inkFaint,
   },
   content: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
   },
-  inputContainer: {
-    marginBottom: 24,
+
+  amountBlock: {
+    alignItems: 'center',
+    paddingVertical: 26,
+    marginBottom: 20,
+    marginTop: 6,
+    backgroundColor: palette.card,
+    borderRadius: 20,
   },
-  label: {
-    fontSize: 14,
+  amountLabel: {
+    fontSize: 12.5,
     fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
+    color: palette.inkSoft,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 10,
   },
-  amountInput: {
+  amountRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 56,
   },
   currency: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '600',
-    color: '#333',
-    marginRight: 8,
+    color: palette.inkSoft,
+    marginRight: 6,
+    marginTop: 6,
   },
   amountTextInput: {
-    flex: 1,
-    fontSize: 24,
-    color: '#333',
+    fontSize: 48,
+    fontWeight: '800',
+    color: palette.ink,
+    minWidth: 40,
+    fontVariant: ['tabular-nums'],
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null),
+  },
+
+  inputContainer: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: palette.inkSoft,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   textInput: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: palette.card,
+    borderRadius: 14,
     paddingHorizontal: 16,
-    height: 56,
-    fontSize: 16,
-    color: '#333',
+    height: 54,
+    fontSize: 15.5,
+    color: palette.ink,
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null),
   },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: palette.card,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    height: 54,
+  },
+  dateRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dateRowText: {
+    fontSize: 15.5,
+    color: palette.ink,
+  },
+
   typeGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -8,
+    gap: 10,
   },
   typeItem: {
-    width: '33.33%',
-    padding: 8,
+    flex: 1,
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginBottom: 16,
+    backgroundColor: palette.card,
+    borderRadius: 16,
     paddingVertical: 16,
   },
   typeItemSelected: {
-    backgroundColor: '#34C759',
+    backgroundColor: palette.green,
+  },
+  typeIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(48,209,88,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  typeIconWrapSelected: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
   },
   typeLabel: {
-    fontSize: 12,
-    color: '#333',
-    marginTop: 8,
+    fontSize: 12.5,
+    color: palette.ink,
+    fontWeight: '600',
     textAlign: 'center',
   },
   typeLabelSelected: {
     color: '#fff',
   },
-  gradientBackground: {
-    flex: 1,
-  },
-}); 
+});

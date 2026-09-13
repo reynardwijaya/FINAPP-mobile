@@ -3,7 +3,19 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert,
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { API_BASE_URL } from '../../constants/Api';
+
+const palette = {
+  bg: '#F2F4F8',
+  card: '#FFFFFF',
+  ink: '#1C1C1E',
+  inkSoft: '#6E6E73',
+  inkFaint: '#AEAEB2',
+  divider: '#EDEDF2',
+  blue: '#0A84FF',
+  red: '#FF453A',
+};
 
 const CATEGORIES = [
   { id: 'food', icon: 'cash', label: 'Gaji Pegawai' },
@@ -22,6 +34,8 @@ export default function AddExpense() {
   const params = useLocalSearchParams();
   const monthParam = params.month !== undefined ? Number(params.month) : undefined;
   const yearParam = params.year !== undefined ? Number(params.year) : undefined;
+
+  const canSave = !!(amount && title && selectedCategory);
 
   const handleSave = async () => {
     if (!amount || !title || !selectedCategory) return;
@@ -42,7 +56,7 @@ export default function AddExpense() {
       expenseDate = new Date().toISOString();
     }
     try {
-      const res = await fetch('http://127.0.0.1:8000/transactions', {
+      const res = await fetch(`${API_BASE_URL}/transactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -67,306 +81,272 @@ export default function AddExpense() {
   };
 
   return (
-    <LinearGradient
-      colors={['#ADD8E6', '#87CEEB', '#6495ED']}
-      style={styles.gradientBackground}
-    >
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="close" size={24} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Add Expense</Text>
-          <TouchableOpacity 
-            onPress={handleSave}
-            disabled={!amount || !title || !selectedCategory}
-            style={[
-              styles.saveButton,
-              (!amount || !title || !selectedCategory) && styles.saveButtonDisabled
-            ]}
-          >
-            <Text style={[
-              styles.saveButtonText,
-              (!amount || !title || !selectedCategory) && styles.saveButtonTextDisabled
-            ]}>Save</Text>
-          </TouchableOpacity>
-        </View>
+    <View style={styles.screen}>
+      {/* Sheet header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
+          <Text style={styles.headerAction}>Cancel</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Add Expense</Text>
+        <TouchableOpacity onPress={handleSave} disabled={!canSave} hitSlop={10}>
+          <Text style={[styles.headerAction, styles.headerSave, !canSave && styles.headerSaveDisabled]}>
+            Save
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-        <ScrollView style={styles.content}>
-          {/* Amount Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Amount</Text>
-            <View style={styles.amountInput}>
-              <Text style={styles.currency}>Rp</Text>
-              <TextInput
-                style={styles.amountTextInput}
-                value={amount}
-                onChangeText={setAmount}
-                keyboardType="numeric"
-                placeholder="0"
-                placeholderTextColor="#999"
-              />
-            </View>
-          </View>
-
-          {/* Title Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Title</Text>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Amount — gaya "how much" ala Apple Cash */}
+        <View style={styles.amountBlock}>
+          <Text style={styles.amountLabel}>Amount</Text>
+          <View style={styles.amountRow}>
+            <Text style={styles.currency}>Rp</Text>
             <TextInput
-              style={styles.textInput}
-              value={title}
-              onChangeText={setTitle}
-              placeholder="What did you spend on?"
-              placeholderTextColor="#999"
+              style={styles.amountTextInput}
+              value={amount}
+              onChangeText={setAmount}
+              keyboardType="numeric"
+              placeholder="0"
+              placeholderTextColor={palette.inkFaint}
             />
           </View>
+        </View>
 
-          {/* Category Selection */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Category</Text>
-            <View style={styles.categoryGrid}>
-              {CATEGORIES.map((category) => (
+        {/* Title */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Title</Text>
+          <TextInput
+            style={styles.textInput}
+            value={title}
+            onChangeText={setTitle}
+            placeholder="What did you spend on?"
+            placeholderTextColor={palette.inkFaint}
+          />
+        </View>
+
+        {/* Date */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Date</Text>
+          {Platform.OS === 'web' ? (
+            <input
+              type="date"
+              value={selectedDate ? selectedDate.substring(0, 10) : ''}
+              onChange={e => setSelectedDate(e.target.value)}
+              style={{
+                width: '100%',
+                height: 54,
+                borderRadius: 14,
+                border: 'none',
+                background: palette.bg,
+                padding: '0 16px',
+                fontSize: 15,
+                color: palette.ink,
+                boxSizing: 'border-box',
+              }}
+            />
+          ) : (
+            <>
+              <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateRow} activeOpacity={0.7}>
+                <View style={styles.dateRowLeft}>
+                  <Ionicons name="calendar-outline" size={18} color={palette.inkFaint} />
+                  <Text style={styles.dateRowText}>
+                    {selectedDate ? selectedDate.substring(0, 10) : 'Select date'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={palette.inkFaint} />
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={selectedDate ? new Date(selectedDate) : new Date()}
+                  mode="date"
+                  display="default"
+                  onChange={(event, picked) => {
+                    setShowDatePicker(false);
+                    if (picked) setSelectedDate(picked.toISOString());
+                  }}
+                />
+              )}
+            </>
+          )}
+        </View>
+
+        {/* Category */}
+        <View style={[styles.inputContainer, { marginBottom: 32 }]}>
+          <Text style={styles.label}>Category</Text>
+          <View style={styles.categoryGrid}>
+            {CATEGORIES.map((category) => {
+              const selected = selectedCategory === category.id;
+              return (
                 <TouchableOpacity
                   key={category.id}
-                  style={[
-                    styles.categoryItem,
-                    selectedCategory === category.id && styles.categoryItemSelected
-                  ]}
+                  style={[styles.categoryItem, selected && styles.categoryItemSelected]}
                   onPress={() => setSelectedCategory(category.id)}
+                  activeOpacity={0.8}
                 >
-                  <Ionicons
-                    name={category.icon as keyof typeof Ionicons.glyphMap}
-                    size={24}
-                    color={selectedCategory === category.id ? '#fff' : '#007AFF'}
-                  />
-                  <Text
-                    style={[
-                      styles.categoryLabel,
-                      selectedCategory === category.id && styles.categoryLabelSelected
-                    ]}
-                  >
+                  <View style={[styles.categoryIconWrap, selected && styles.categoryIconWrapSelected]}>
+                    <Ionicons
+                      name={category.icon as keyof typeof Ionicons.glyphMap}
+                      size={20}
+                      color={selected ? '#fff' : palette.red}
+                    />
+                  </View>
+                  <Text style={[styles.categoryLabel, selected && styles.categoryLabelSelected]}>
                     {category.label}
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </View>
+              );
+            })}
           </View>
-
-          {/* Date Picker Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Date</Text>
-            {Platform.OS === 'web' ? (
-              <input
-                type="date"
-                value={selectedDate ? selectedDate.substring(0, 10) : ''}
-                onChange={e => setSelectedDate(e.target.value)}
-                style={{
-                  width: '100%',
-                  height: 48,
-                  borderRadius: 8,
-                  border: '1px solid #007AFF',
-                  padding: 12,
-                  fontSize: 16,
-                  background: '#fff',
-                  color: '#333',
-                  marginBottom: 8,
-                  outline: 'none',
-                  marginTop: 4,
-                }}
-              />
-            ) : (
-              <>
-                <TouchableOpacity
-                  style={styles.dateInputBox}
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <Text style={{
-                    color: selectedDate ? '#333' : '#999',
-                    fontSize: 16,
-                    paddingVertical: 6,
-                    paddingHorizontal: 2,
-                  }}>
-                    {selectedDate ? selectedDate.substring(0, 10) : 'Select date'}
-                  </Text>
-                  <Ionicons name="calendar" size={20} color="#007AFF" style={{ marginLeft: 8 }} />
-                </TouchableOpacity>
-                {showDatePicker && (
-                  <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                      <Text style={styles.modalTitle}>Select Date</Text>
-                      <TextInput
-                        style={[styles.textInput, { marginBottom: 12 }]}
-                        value={selectedDate ? selectedDate.substring(0, 10) : ''}
-                        onChangeText={setSelectedDate}
-                        placeholder="YYYY-MM-DD"
-                        keyboardType="numeric"
-                      />
-                      <TouchableOpacity
-                        style={styles.confirmButton}
-                        onPress={() => setShowDatePicker(false)}
-                      >
-                        <Text style={styles.confirmButtonText}>Confirm</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )}
-              </>
-            )}
-          </View>
-        </ScrollView>
-      </View>
-    </LinearGradient>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: palette.bg,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
+    paddingHorizontal: 20,
     paddingTop: 60,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingBottom: 16,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16.5,
+    fontWeight: '700',
+    color: palette.ink,
   },
-  saveButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
+  headerAction: {
+    fontSize: 15.5,
+    color: palette.inkSoft,
+    fontWeight: '500',
   },
-  saveButtonDisabled: {
-    backgroundColor: '#E5E5EA',
+  headerSave: {
+    color: palette.blue,
+    fontWeight: '700',
   },
-  saveButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  saveButtonTextDisabled: {
-    color: '#999',
+  headerSaveDisabled: {
+    color: palette.inkFaint,
   },
   content: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
   },
-  inputContainer: {
-    marginBottom: 24,
+
+  amountBlock: {
+    alignItems: 'center',
+    paddingVertical: 26,
+    marginBottom: 20,
+    marginTop: 6,
+    backgroundColor: palette.card,
+    borderRadius: 20,
   },
-  label: {
-    fontSize: 14,
+  amountLabel: {
+    fontSize: 12.5,
     fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
+    color: palette.inkSoft,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 10,
   },
-  amountInput: {
+  amountRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 56,
   },
   currency: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '600',
-    color: '#333',
-    marginRight: 8,
+    color: palette.inkSoft,
+    marginRight: 6,
+    marginTop: 6,
   },
   amountTextInput: {
-    flex: 1,
-    fontSize: 24,
-    color: '#333',
+    fontSize: 48,
+    fontWeight: '800',
+    color: palette.ink,
+    minWidth: 40,
+    fontVariant: ['tabular-nums'],
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null),
+  },
+
+  inputContainer: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: palette.inkSoft,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   textInput: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: palette.card,
+    borderRadius: 14,
     paddingHorizontal: 16,
-    height: 56,
-    fontSize: 16,
-    color: '#333',
+    height: 54,
+    fontSize: 15.5,
+    color: palette.ink,
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null),
   },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: palette.card,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    height: 54,
+  },
+  dateRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dateRowText: {
+    fontSize: 15.5,
+    color: palette.ink,
+  },
+
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginHorizontal: -8,
+    gap: 10,
   },
   categoryItem: {
-    width: '33.33%',
-    padding: 8,
+    width: '47%',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginBottom: 16,
+    backgroundColor: palette.card,
+    borderRadius: 16,
     paddingVertical: 16,
   },
   categoryItemSelected: {
-    backgroundColor: '#007AFF',
+    backgroundColor: palette.red,
+  },
+  categoryIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,69,58,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  categoryIconWrapSelected: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
   },
   categoryLabel: {
-    fontSize: 12,
-    color: '#333',
-    marginTop: 8,
+    fontSize: 12.5,
+    color: palette.ink,
+    fontWeight: '600',
     textAlign: 'center',
   },
   categoryLabelSelected: {
     color: '#fff',
   },
-  dateInputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    padding: 12,
-    marginBottom: 8,
-    justifyContent: 'space-between',
-  },
-  modalOverlay: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 24,
-    width: 300,
-    maxWidth: '90%',
-    maxHeight: 400,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  confirmButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    marginTop: 16,
-  },
-  confirmButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  gradientBackground: {
-    flex: 1,
-  },
-}); 
+});
