@@ -303,7 +303,7 @@ func GetInsights(c *gin.Context) {
 	defer client.Close()
 
 	// Gunakan model generatif
-	model := client.GenerativeModel("gemini-1.5-flash-latest") // Ganti dengan nama model yang lebih baru
+	model := client.GenerativeModel("gemini-3.6-flash")
 
 	// Hasilkan konten
 	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
