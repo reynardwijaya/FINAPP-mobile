@@ -257,6 +257,8 @@ const styles = StyleSheet.create({
   amountRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 32,
   },
   currency: {
     fontSize: 26,
@@ -266,10 +268,10 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   amountTextInput: {
+    flex: 1,
     fontSize: 48,
     fontWeight: '800',
     color: palette.ink,
-    minWidth: 40,
     fontVariant: ['tabular-nums'],
     ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : null),
   },
