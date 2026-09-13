@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { BlurView } from 'expo-blur';
+import Markdown from 'react-native-markdown-display';
 import { API_BASE_URL } from '../../constants/Api';
 
 const palette = {
@@ -290,7 +291,7 @@ export default function Analytics() {
               <ActivityIndicator size="small" color={palette.blue} />
             </View>
           ) : (
-            <Text style={styles.insightTextContent}>{keyInsights}</Text>
+            <Markdown style={markdownStyles}>{keyInsights}</Markdown>
           )}
         </View>
       </ScrollView>
@@ -367,6 +368,20 @@ const SPENDING_COLORS: { [key: string]: string } = {
   'Sponsor': '#34C759',
   'Gaji Pegawai': '#0A84FF',
   'Restock': '#34C759',
+};
+
+const markdownStyles = {
+  body: { fontSize: 14, color: palette.inkSoft, lineHeight: 21 },
+  heading1: { fontSize: 17, fontWeight: '700' as const, color: palette.ink, marginTop: 10, marginBottom: 6 },
+  heading2: { fontSize: 15.5, fontWeight: '700' as const, color: palette.ink, marginTop: 10, marginBottom: 6 },
+  heading3: { fontSize: 14.5, fontWeight: '700' as const, color: palette.ink, marginTop: 8, marginBottom: 4 },
+  strong: { fontWeight: '700' as const, color: palette.ink },
+  em: { fontStyle: 'italic' as const },
+  paragraph: { marginTop: 0, marginBottom: 10 },
+  bullet_list: { marginVertical: 2 },
+  ordered_list: { marginVertical: 2 },
+  list_item: { marginBottom: 6 },
+  hr: { backgroundColor: palette.divider, height: 1, marginVertical: 12 },
 };
 
 const styles = StyleSheet.create({
@@ -568,11 +583,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(10,132,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  insightTextContent: {
-    fontSize: 14,
-    color: palette.inkSoft,
-    lineHeight: 21,
   },
 
   // Month/Year modal
